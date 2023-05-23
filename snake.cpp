@@ -23,12 +23,31 @@ public:
 
 int main() {
 
+    // Create overall window. This will display menu and status bar,
+    // and also contain the game animation window 'gamewin'
     initscr();
+    start_color();
+
+    // Create game animation window 'gamewin'. Same width as main window, 
+    // but two rows shorter to allow for menu and status bar.
+    int h, w;
+    getmaxyx(stdscr, h, w);
+    WINDOW *gamewin = newwin(h-2, w, 1, 0);
+    // STUB - colour the background so we can see it
+    init_pair(1, COLOR_BLACK, COLOR_GREEN);
+    wbkgd(gamewin, COLOR_PAIR(1));
+
+    // key handling options
     cbreak();
 
-    Snake s(4);
+    // STUB - placeholder menus
+    printw("Menu goes here");
+    mvprintw(h-1, 0, "Status goes here");
+
+    refresh();
+    wrefresh(gamewin);
 
     getch();
+    delwin(gamewin);
     endwin();
-
 }
