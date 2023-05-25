@@ -38,25 +38,47 @@ int main() {
 
     // Create game animation window 'gamewin'. Same width as stdscr
     // but two rows shorter to allow for menu and status bars.
-    int h, w;
-    getmaxyx(stdscr, h, w);
-    WINDOW *gamewin = newwin(h - 2, w, 1, 0);
+    WINDOW *gamewin = newwin(LINES - 2, COLS, 1, 0);
     // STUB - colour the background so we can see it
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(1));
+    wborder(gamewin, 0,0,0,0,0,0,0,0);
+    mvwprintw(gamewin, 2, 2, "TESTING");
 
     // key handling options
     cbreak();
     keypad(stdscr, TRUE);
+    keypad(gamewin, TRUE);
+    noecho();
+    halfdelay(10);  // 1 second tick by default
 
     // STUB - placeholder menus
     printw("Menu goes here");
-    mvprintw(h - 1, 0, "Status goes here");
+    mvprintw(LINES - 1, 0, "Status goes here");
 
-    refresh();
-    wrefresh(gamewin);
+    // Main program loop
+    int c;  // character input
 
-    getch();
+    while(TRUE) {
+        c = getch();    // Read any keystroke into buffer
+        switch(c) {
+            case KEY_UP:
+                mvprintw(0, 0, "UP   ");
+                break;
+            case KEY_DOWN:
+                mvprintw(0, 0, "DOWN ");
+                break;
+            case KEY_LEFT:
+                mvprintw(0, 0, "LEFT ");
+                break;
+            case KEY_RIGHT:
+                mvprintw(0, 0, "RIGHT");
+        }
+        if (c == 'q' or c == 'Q')
+            break;
+        refresh();
+        wrefresh(gamewin);
+    }
 
     // Cleanup and exit
     delwin(gamewin);
