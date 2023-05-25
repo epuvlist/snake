@@ -1,21 +1,22 @@
 #include <ncurses.h>
-#include <unistd.h>
+// #include <unistd.h>  // Not needed if not using sleep() or usleep()
 
 // Proof of concept of a timed running loop with keyboard reading
 
 int main() {
 
     initscr();
-    cbreak();
-    noecho();
-    nodelay(stdscr, TRUE);
-    keypad(stdscr, TRUE);
+    cbreak();   // Allow system break
+    noecho();   // Do not echo keypresses
+//    nodelay(stdscr, TRUE);  // Read key presses into buffer without waiting
+    halfdelay(10);
+    keypad(stdscr, TRUE);   // Enable function and arrow keys
 
     int counter = 0;
     int c;
 
     while(TRUE) {
-        c = getch();
+        c = getch();    // Read any keystroke into buffer
         switch(c) {
             case KEY_UP:
                 printw("UP ");
@@ -33,7 +34,7 @@ int main() {
             break;
         printw("%d ", counter++);
         refresh();
-        usleep(500000); // 500 millisecs
+//        usleep(750000); // sleep for 0.75 seconds
     }
 
     endwin();
