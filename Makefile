@@ -1,5 +1,5 @@
 snake: snake.cpp
-	g++ -Wall snake.cpp -lncurses -osnake
+	g++ -Wall -DDEBUG snake.cpp -lncurses -osnake
 
 testrunloop: testrunloop.cpp
 	g++ -Wall testrunloop.cpp -lncurses -otestrunloop

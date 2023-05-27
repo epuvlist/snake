@@ -1,6 +1,10 @@
 #include <ncurses.h>
 #include <unistd.h>
 
+// Statics
+static const char snake_piece = '*',
+    food = 'X';
+
 class Snake {
 
     struct Coord {  // Struct that contains a pair of screen coordinates (y, x)
@@ -14,7 +18,6 @@ class Snake {
     int direction;  // Direction the snake is moving in. For this we will
                     // use the constants KEY_UP, KEY_LEFT etc.
     int max_length; // Maximum length (also the size of the coords array)
-    char piece_char = '*';
 
 public:
     // Constructor. 'size' is the maximum size the snake is allowed to grow to.
@@ -22,7 +25,7 @@ public:
         coords = new Coord[size];
         head = 0;
         tail = 0;
-        direction = KEY_RIGHT;
+        direction = KEY_LEFT;
         max_length = size;
     };
 
@@ -33,41 +36,59 @@ public:
     void start(WINDOW *win) {
         // Display a new snake (i.e. head/tail only).
         // Set the coordinates as the middle of the window
+
         int rows, cols;
         getmaxyx(win, rows, cols);
         coords[0].y = rows / 2;
         coords[0].x = cols / 2;
         wmove(win, coords[0].y, coords[0].x);
-        waddch(win, piece_char);
+        waddch(win, snake_piece);
         wrefresh(win);
     };
 
-    void advance(WINDOW *win) {
-        int old_row = coords[head].y, old_col = coords[head].x;
+    int advance(WINDOW *win) {
+        // Method to add a new head.
+        // Input parameter 'win' - window to draw in
+        // Return value: TRUE if success, FALSE if gone out 
+        // of bounds or back on itself (i.e. GAME OVER condition).
 
-        // Advance the head. Reset to array position 0 if reached the max
-        if (head == max_length-1)
-            head = 0;
-            else head++;
+        int old_row = coords[head].y, old_col = coords[head].x;
 
         switch(direction) {
             case KEY_LEFT:
-            // TODO - check for going out of bounds or going back on yourself
+                if (coords[head].x == 0)
+                    // Hit the left side - Game Over
+                    return 0;
+
+                // Advance the head in the coordinates array.
+                // If the head reaches the end of the array, then start again
+                // at position 0.
+                // This is implemented by using the modulo of the
+                // maximum length.
+                head = (head + 1) % max_length;
                 coords[head].y = old_row;
                 coords[head].x = old_col - 1;
-                wmove(win, coords[head].y, coords[head].x);
-                waddch(win, piece_char);
+
+                if (winch(win) && A_CHARTEXT != food) {
+                    // No food here, so remove the tail
+                    mvwaddch(win, coords[tail].y, coords[tail].x, ' ');
+                    // Advance the tail in the coordinates array
+                    tail = (tail + 1) % max_length;  
+                }
+                // Plot new head piece
+                mvwaddch(win, coords[head].y, coords[head].x, snake_piece);
                 break;
             case KEY_RIGHT:
                 coords[head].y = old_row;
                 coords[head].x = old_col + 1;
                 wmove(win, coords[head].y, coords[head].x);
-                waddch(win, piece_char);
+                waddch(win, snake_piece);
                 break;
             case KEY_UP:
             case KEY_DOWN:
                 break;
         };
+    return 1;
     };
 };
 
