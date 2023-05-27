@@ -1,5 +1,5 @@
 #include <ncurses.h>
-#include <unistd.h>
+// #include <unistd.h>
 
 // Statics
 static const char snake_piece = '*',
@@ -33,6 +33,16 @@ public:
         delete coords;
     };
 
+    int row() {
+        // Return the snake's current row on screen
+        return coords[head].y;
+    }
+
+    int col() {
+        // Return the snake's current column on screen
+        return coords[head].x;
+        }
+
     void start(WINDOW *win) {
         // Display a new snake (i.e. head/tail only).
         // Set the coordinates as the middle of the window
@@ -46,26 +56,21 @@ public:
         wrefresh(win);
     };
 
-    int advance(WINDOW *win) {
-        // Method to add a new head.
-        // Input parameter 'win' - window to draw in
-        // Return value: TRUE if success, FALSE if gone out 
-        // of bounds or back on itself (i.e. GAME OVER condition).
+    void advance(WINDOW *win) {
+        // Add a new head, and delete old tail if needed..
+        // Also update the coords array, which tracks where the snake has been.
 
         int old_row = coords[head].y, old_col = coords[head].x;
-
+        
+        // Advance the head in the coordinates array.
+        // If the head reaches the end of the array, then start again
+        // at position 0.
+        // This is implemented by using the modulo of the
+        // maximum length.
+        head = (head + 1) % max_length;
+ 
         switch(direction) {
             case KEY_LEFT:
-                if (coords[head].x == 0)
-                    // Hit the left side - Game Over
-                    return 0;
-
-                // Advance the head in the coordinates array.
-                // If the head reaches the end of the array, then start again
-                // at position 0.
-                // This is implemented by using the modulo of the
-                // maximum length.
-                head = (head + 1) % max_length;
                 coords[head].y = old_row;
                 coords[head].x = old_col - 1;
 
@@ -75,20 +80,18 @@ public:
                     // Advance the tail in the coordinates array
                     tail = (tail + 1) % max_length;  
                 }
-                // Plot new head piece
-                mvwaddch(win, coords[head].y, coords[head].x, snake_piece);
                 break;
             case KEY_RIGHT:
                 coords[head].y = old_row;
                 coords[head].x = old_col + 1;
-                wmove(win, coords[head].y, coords[head].x);
-                waddch(win, snake_piece);
                 break;
             case KEY_UP:
             case KEY_DOWN:
                 break;
         };
-    return 1;
+
+        // Plot new head piece
+        mvwaddch(win, coords[head].y, coords[head].x, snake_piece);
     };
 };
 
