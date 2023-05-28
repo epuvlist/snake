@@ -1,10 +1,12 @@
 #include <ncurses.h>
-// #include <unistd.h>
+// #include <unistd.h> // needed if using sleep() or usleep()
 
 // Statics
 static const char snake_piece = '*',
     food = 'X';
+const int game_speed = 10; // Parameter for halfdelay function in tenths of a second
 
+// Class definition
 class Snake {
 
     struct Coord {  // Struct that contains a pair of screen coordinates (y, x)
@@ -51,13 +53,12 @@ public:
         getmaxyx(win, rows, cols);
         coords[0].y = rows / 2;
         coords[0].x = cols / 2;
-        wmove(win, coords[0].y, coords[0].x);
-        waddch(win, snake_piece);
+        mvwaddch(win, coords[0].y, coords[0].x, snake_piece);
         wrefresh(win);
     };
 
     void advance(WINDOW *win) {
-        // Add a new head, and delete old tail if needed..
+        // Advance the snake by adding a new head, and deleting old tail if needed.
         // Also update the coords array, which tracks where the snake has been.
 
         int old_row = coords[head].y, old_col = coords[head].x;
@@ -74,7 +75,7 @@ public:
                 coords[head].y = old_row;
                 coords[head].x = old_col - 1;
 
-                if (winch(win) && A_CHARTEXT != food) {
+                if ((winch(win) & A_CHARTEXT) != food) {
                     // No food here, so remove the tail
                     mvwaddch(win, coords[tail].y, coords[tail].x, ' ');
                     // Advance the tail in the coordinates array
@@ -102,14 +103,16 @@ int main() {
     initscr();
     start_color();
 
-    // Create game animation window 'gamewin'. Same width as stdscr
+    // Create gameplay window 'gamewin'. Same width as stdscr
     // but two rows shorter to allow for menu and status bars.
     WINDOW *gamewin = newwin(LINES - 2, COLS, 1, 0);
-    // STUB - colour the background so we can see it
+#ifdef DEBUG
+    // While in dev - colour the background so we can see it
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(1));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
     mvwprintw(gamewin, 2, 2, "TESTING");
+#endif
 
     // key handling options
     cbreak();
@@ -118,7 +121,7 @@ int main() {
     noecho();
     curs_set(0);
 
-#ifndef DEBUG
+#ifndef DEBUG  // Use blocking mode while debugging
     halfdelay(10);  // 1 second tick by default
 #endif
 
@@ -142,8 +145,9 @@ int main() {
 #endif
 
     // Main program loop
-    int c;  // character input
 /*
+    int c;  // character input
+
     while(TRUE) {
         c = getch();    // Read any keystroke into buffer
         switch(c) {
