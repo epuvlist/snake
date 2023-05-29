@@ -2,9 +2,10 @@
 // =========
 //
 // Snake game using ncurses
+//
+// Copyright (C) Ernold C. McPuvlist, 2023
 
 #include <ncurses.h>
-// #include <unistd.h> // needed if using sleep() or usleep()
 
 // Statics
 static const char snake_piece = '*',
@@ -19,8 +20,8 @@ class Snake {
         int row, col;
     };
 
-    WINDOW *win;    // The window to display the snake in
-    Coord *coords;  // Pointer to an array of coordinates
+    WINDOW *win;    // The window to display the snake in.
+    Coord *coords;  // Pointer to an array of coordinates.
                     // The array is allocated at runtime in the constructor.
 
     int head, tail; // Indices into the coords, identifying where the head and tail are.
@@ -32,7 +33,9 @@ class Snake {
                     // use the constants KEY_UP, KEY_LEFT etc.
 
 public:
-    // Constructor. 'size' is the maximum size the snake is allowed to grow to.
+    // Constructor. 'w' is the ncurses window that the snake will be drawn in.
+    // The snake is allowed to fill the entire window, so max_length is
+    // max no. of rows times max no. of columns.
     Snake(WINDOW *w) {
         win = w;
         getmaxyx(w, max_row, max_col);
@@ -43,15 +46,10 @@ public:
         direction = KEY_LEFT;
     };
 
-    ~Snake() {  // Default destructor
+    ~Snake() {  // Destructor
         delete coords;
     };
-/* Not needed?
-    Coord *get_position() {
-        // Return the snake head's current position on screen
-        return &coords[head];
-    }
-*/
+
     int get_direction() {
         return direction;
     }
@@ -70,8 +68,9 @@ public:
         wrefresh(win);
     };
 
-    int out_of_bounds() {
+    int is_out_of_bounds() {
         // Check if snake is about to go out of bounds
+        // Returns 1 if going out of bounds, 0 otherwise
         int row = coords[head].row, col = coords[head].col;
 
         if ((row == 0 and direction == KEY_UP) or
@@ -83,7 +82,8 @@ public:
     }
 
     void advance() {
-        // Advance the snake by adding a new head, and deleting old tail if needed.
+        // Advance the snake by adding a new head, and deleting old tail if 
+        // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
 
         int old_row = coords[head].row, old_col = coords[head].col;
@@ -115,15 +115,19 @@ public:
                 break;
         };
 
-        if ((winch(win) & A_CHARTEXT) != food) {
-            // No food here, so remove the tail
+        // Move cursor to new head position
+        wmove(win, coords[head].row, coords[head].col);
+
+        if ((winch(win) & A_CHARTEXT) == food)
+            // Food piece hit - plot new head but don't erase tail
+            waddch(win, snake_piece);
+        else {
+            // No food here, plot head and remove the tail
+            waddch(win, snake_piece);
             mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
             // Advance the tail in the coordinates array
             tail = (tail + 1) % max_length;  
         }
-
-        // Plot new head piece
-        mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
     };
 };
 
@@ -161,11 +165,13 @@ int main() {
     mvprintw(LINES - 1, 0, "Status goes here");
     refresh();
 
-    // Create the snake object.
-    // Maximum length is gamewin rows x gamewin columns
-    int gmrows, gmcols;
-    getmaxyx(gamewin, gmrows, gmcols);
+    // Create the snake object in gamewin.
     Snake snake(gamewin);
+
+#ifdef DEBUG
+    // Place a piece of food for testing
+    mvwaddch(gamewin, 3, 3, food);
+#endif
 
     snake.start();
 
@@ -215,7 +221,7 @@ int main() {
             break;
 
         // Check for moving out of bounds
-        if (snake.out_of_bounds())
+        if (snake.is_out_of_bounds())
             game_over = 1;
 
         if (!game_over)
