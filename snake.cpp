@@ -11,13 +11,13 @@ static const char snake_piece = '*',
     food = 'X';
 const int game_speed = 10; // Parameter for halfdelay function in tenths of a second
 
-// Define Coord structure, to hold row & col coordinates
-struct Coord {  // Struct that contains a pair of screen coordinates (y, x)
-        int row, col;
-};
-
 // Class definition
 class Snake {
+
+    // Define Coord structure, to hold row & col coordinates
+    struct Coord {  // Struct that contains a pair of screen coordinates (y, x)
+        int row, col;
+    };
 
     WINDOW *win;    // The window to display the snake in
     Coord *coords;  // Pointer to an array of coordinates
@@ -96,24 +96,31 @@ public:
         head = (head + 1) % max_length;
  
         switch(direction) {
+            // Update the coords array with new head position
             case KEY_LEFT:
                 coords[head].row = old_row;
                 coords[head].col = old_col - 1;
-
-                if ((winch(win) & A_CHARTEXT) != food) {
-                    // No food here, so remove the tail
-                    mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
-                    // Advance the tail in the coordinates array
-                    tail = (tail + 1) % max_length;  
-                }
                 break;
             case KEY_RIGHT:
-
+                coords[head].row = old_row;
+                coords[head].col = old_col + 1;
                 break;
             case KEY_UP:
+                coords[head].row = old_row - 1;
+                coords[head].col = old_col;
+                break;          
             case KEY_DOWN:
+                coords[head].row = old_row + 1;
+                coords[head].col = old_col;
                 break;
         };
+
+        if ((winch(win) & A_CHARTEXT) != food) {
+            // No food here, so remove the tail
+            mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
+            // Advance the tail in the coordinates array
+            tail = (tail + 1) % max_length;  
+        }
 
         // Plot new head piece
         mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
@@ -150,7 +157,7 @@ int main() {
 #endif
 
     // STUB - placeholder menus
-    printw("Menu goes here");
+    printw("SNAKE");
     mvprintw(LINES - 1, 0, "Status goes here");
     refresh();
 
@@ -175,6 +182,7 @@ int main() {
         direction = snake.get_direction();
 
         switch(c) {
+            // Update the direction based on what key has been pressed
             case KEY_UP:
                 if (direction == KEY_DOWN) { // Crashed back onto yourself
                     game_over = 1;
@@ -183,13 +191,25 @@ int main() {
                 snake.set_direction(KEY_UP);
                 break;
             case KEY_DOWN:
-                mvprintw(0, 0, "DOWN ");
+                if (direction == KEY_UP) { // Crashed back onto yourself
+                    game_over = 1;
+                    break;
+                }
+                snake.set_direction(KEY_DOWN);
                 break;
             case KEY_LEFT:
-                mvprintw(0, 0, "LEFT ");
+                if (direction == KEY_RIGHT) { // Crashed back onto yourself
+                    game_over = 1;
+                    break;
+                }
+                snake.set_direction(KEY_LEFT);
                 break;
             case KEY_RIGHT:
-                mvprintw(0, 0, "RIGHT");
+                if (direction == KEY_LEFT) { // Crashed back onto yourself
+                    game_over = 1;
+                    break;
+                }
+                snake.set_direction(KEY_RIGHT);
         }
         if (c == 'q' or c == 'Q')
             break;
@@ -205,7 +225,9 @@ int main() {
         wrefresh(gamewin);
     }
 
-/* STUB - 'Game Over' point here */
+    // ** Game Over **
+    mvprintw(0, 0, "GAME OVER");
+    getch();
 
     // Cleanup and exit
     delwin(gamewin);
