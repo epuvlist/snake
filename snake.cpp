@@ -68,23 +68,25 @@ public:
         wrefresh(win);
     };
 
-    int is_out_of_bounds() {
-        // Check if snake is about to go out of bounds
-        // Returns 1 if going out of bounds, 0 otherwise
+    int can_advance() {
+        // Check if snake has a clear path ahead.
+        // Returns 1 if clear ahead, 0 otherwise
         int row = coords[head].row, col = coords[head].col;
 
+        // Check if hitting the edge of the window
         if ((row == 0 and direction == KEY_UP) or
             (row == max_row-1 and direction == KEY_DOWN) or
             (col == 0 and direction == KEY_LEFT) or
             (col == max_col-1 and direction == KEY_RIGHT))
-            return 1;
-        else return 0;
+            return 0;
+        else return 1;
     }
 
-    void advance() {
+    int advance() {
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
+        // Returns 1 if successful, 0 if hit another part of the snake.
 
         int old_row = coords[head].row, old_col = coords[head].col;
         
@@ -118,15 +120,22 @@ public:
         // Move cursor to new head position
         wmove(win, coords[head].row, coords[head].col);
 
-        if ((winch(win) & A_CHARTEXT) == food)
-            // Food piece hit - plot new head but don't erase tail
-            waddch(win, snake_piece);
-        else {
-            // No food here, plot head and remove the tail
-            waddch(win, snake_piece);
-            mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
-            // Advance the tail in the coordinates array
-            tail = (tail + 1) % max_length;  
+        switch(winch(win) & A_CHARTEXT) {
+            case food:
+                // Food piece hit - plot new head but don't erase tail
+                waddch(win, snake_piece);
+                return 1;
+                break;
+            case snake_piece:
+                return 0;  // Game Over
+                break;           
+            default:
+                // No food here, plot head and remove the tail
+                waddch(win, snake_piece);
+                mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
+                // Advance the tail in the coordinates array
+                tail = (tail + 1) % max_length;
+                return 1;
         }
     };
 };
@@ -221,7 +230,7 @@ int main() {
             break;
 
         // Check for moving out of bounds
-        if (snake.is_out_of_bounds())
+        if (!snake.can_advance())
             game_over = 1;
 
         if (!game_over)

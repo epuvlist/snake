@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "gdb",
             "logging": {
               "moduleLoad": false,
