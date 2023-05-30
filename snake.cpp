@@ -6,11 +6,16 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 #include <ncurses.h>
+#include <stdlib.h>
+#include <time.h>
 
-// Statics
+// Forward declarations
+void plot_food(WINDOW *w);
+
+// Static globals
 static const char snake_piece = '*',
     food = 'X';
-const int game_speed = 10; // Parameter for halfdelay function in tenths of a second
+static const int game_speed = 10; // Parameter for halfdelay function in tenths of a second
 
 // Class definition
 class Snake {
@@ -124,6 +129,7 @@ public:
             case food:
                 // Food piece hit - plot new head but don't erase tail
                 waddch(win, snake_piece);
+                plot_food(win);  // Plot another piece
                 return 1;
                 break;
             case snake_piece:
@@ -140,12 +146,33 @@ public:
     };
 };
 
+void plot_food(WINDOW *win) {
+    // Plot a new piece of food in a random location
+    int max_row, max_col;
+    getmaxyx(win, max_row, max_col);
+
+    int row, col;
+    char screen_cell;
+    
+    do {
+        // TODO - need to add 1?
+        row = rand() % max_row, col = rand() % max_col;
+        screen_cell = mvwinch(win, row, col) & A_CHARTEXT;
+    }
+    while (screen_cell != ' ');
+
+    waddch(win, food);
+}
+
 int main() {
 
     // Create overall window. This will display menu and status bar,
     // and also contain the game animation window 'gamewin'
     initscr();
     start_color();
+
+    // Seed the random generator
+    srand(time(NULL));
 
     // Create gameplay window 'gamewin'. Same width as stdscr
     // but two rows shorter to allow for menu and status bars.
@@ -177,12 +204,9 @@ int main() {
     // Create the snake object in gamewin.
     Snake snake(gamewin);
 
-#ifdef DEBUG
-    // Place a piece of food for testing
-    mvwaddch(gamewin, 3, 3, food);
-#endif
-
     snake.start();
+    // Place a piece of food
+    plot_food(gamewin);
 
     // Main program loop
 
@@ -191,8 +215,12 @@ int main() {
     // Coord *rowcol;
     int direction;
 
+    // ==================
+    // Main gameplay loop
+    // ==================
+
     while(!game_over) {
-        c = getch();    // Read keystroke into buffer
+        c = wgetch(gamewin);    // Read keystroke into buffer
 
         direction = snake.get_direction();
 
@@ -234,7 +262,8 @@ int main() {
             game_over = 1;
 
         if (!game_over)
-            snake.advance();
+            if (!snake.advance())   // Advance the snake. If an error is returned,
+                game_over = 1;      // the snake has collided with itself, game over
         
         refresh();
         wrefresh(gamewin);
