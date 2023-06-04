@@ -15,7 +15,7 @@ void plot_food(WINDOW *w);
 // Static globals
 static const char snake_piece = '*',
     food = 'X';
-static const int game_speed = 10; // Parameter for halfdelay function in tenths of a second
+static const int game_speed = 3; // Parameter for halfdelay function in tenths of a second
 
 // Class definition
 class Snake {
@@ -64,13 +64,14 @@ public:
     }
 
     void start() {
-        // Display a new snake (i.e. head/tail only).
-        // Set the coordinates as the middle of the window
+        // Clear the window and plot a new snake (i.e. head/tail only).
 
+        wclear(win);
+        // Set the coordinates as the middle of the window
         coords[0].row = max_row / 2;
         coords[0].col = max_col / 2;
+
         mvwaddch(win, coords[0].row, coords[0].col, snake_piece);
-        wrefresh(win);
     };
 
     int can_advance() {
@@ -166,6 +167,12 @@ void plot_food(WINDOW *win) {
 
 int main() {
 
+    int c;  // keyboard input
+    int game_over;  // When becomes 1, game over
+    int gameover_col; // Starting column of "Game Over"
+    int direction;
+    int score;
+
     // Create overall window. This will display menu and status bar,
     // and also contain the game animation window 'gamewin'
     initscr();
@@ -187,91 +194,100 @@ int main() {
 
     // key handling options
     cbreak();
-    keypad(stdscr, TRUE);
+    // keypad(stdscr, TRUE);
     keypad(gamewin, TRUE);
     noecho();
     curs_set(0);
 
-#ifndef DEBUG  // Use blocking mode while debugging
-    halfdelay(10);  // 1 second tick by default
-#endif
+    nodelay(stdscr, false); // Blocking mode while in main menu loop
 
-    // STUB - placeholder menus
-    printw("SNAKE");
-    mvprintw(LINES - 1, 0, "Status goes here");
+    // Set up the containing screen
+    gameover_col = 20;
+    mvprintw(0, 0, "Score:");  // TODO - move to right hand side
+    mvprintw(LINES - 1, 0, "S - Start New Game | Q - Quit");
     refresh();
 
     // Create the snake object in gamewin.
     Snake snake(gamewin);
 
-    snake.start();
-    // Place a piece of food
-    plot_food(gamewin);
+    // ===================
+    // Main control loop
+    // ===================
 
-    // Main program loop
+    c = getch();  // Wait for key
+    while (c != 'q' and c !='Q') {
 
-    int c;  // keyboard input
-    int game_over = 0;  // When becomes 1, game over
-    // Coord *rowcol;
-    int direction;
-
-    // ==================
-    // Main gameplay loop
-    // ==================
-
-    while(!game_over) {
-        c = wgetch(gamewin);    // Read keystroke into buffer
-
-        direction = snake.get_direction();
-
-        switch(c) {
-            // Update the direction based on what key has been pressed
-            case KEY_UP:
-                if (direction == KEY_DOWN) { // Crashed back onto yourself
-                    game_over = 1;
-                    break;
-                }
-                snake.set_direction(KEY_UP);
-                break;
-            case KEY_DOWN:
-                if (direction == KEY_UP) { // Crashed back onto yourself
-                    game_over = 1;
-                    break;
-                }
-                snake.set_direction(KEY_DOWN);
-                break;
-            case KEY_LEFT:
-                if (direction == KEY_RIGHT) { // Crashed back onto yourself
-                    game_over = 1;
-                    break;
-                }
-                snake.set_direction(KEY_LEFT);
-                break;
-            case KEY_RIGHT:
-                if (direction == KEY_LEFT) { // Crashed back onto yourself
-                    game_over = 1;
-                    break;
-                }
-                snake.set_direction(KEY_RIGHT);
-        }
-        if (c == 'q' or c == 'Q')
-            break;
-
-        // Check for moving out of bounds
-        if (!snake.can_advance())
-            game_over = 1;
-
-        if (!game_over)
-            if (!snake.advance())   // Advance the snake. If an error is returned,
-                game_over = 1;      // the snake has collided with itself, game over
-        
+        // Reset game state
+        game_over = 0;
+        mvprintw(0, gameover_col, "         ");
         refresh();
-        wrefresh(gamewin);
-    }
 
-    // ** Game Over **
-    mvprintw(0, 0, "GAME OVER");
-    getch();
+        if (c == 's' or c == 'S') {
+            // Start the game
+            snake.start();
+            // Place a piece of food
+            plot_food(gamewin);
+#ifndef DEBUG
+            nodelay(gamewin, true);
+#endif
+            // Main gameplay loop
+
+            while(!game_over) {
+                c = wgetch(gamewin);    // Read keystroke into buffer
+
+                direction = snake.get_direction();
+
+                switch(c) {
+                    // Update the direction based on what key has been pressed
+                    case KEY_UP:
+                        if (direction == KEY_DOWN) { // Crashed back onto yourself
+                            game_over = 1;
+                            break;
+                        }
+                        snake.set_direction(KEY_UP);
+                        break;
+                    case KEY_DOWN:
+                        if (direction == KEY_UP) { // Crashed back onto yourself
+                            game_over = 1;
+                            break;
+                        }
+                        snake.set_direction(KEY_DOWN);
+                        break;
+                    case KEY_LEFT:
+                        if (direction == KEY_RIGHT) { // Crashed back onto yourself
+                            game_over = 1;
+                            break;
+                        }
+                        snake.set_direction(KEY_LEFT);
+                        break;
+                    case KEY_RIGHT:
+                        if (direction == KEY_LEFT) { // Crashed back onto yourself
+                            game_over = 1;
+                            break;
+                        }
+                        snake.set_direction(KEY_RIGHT);
+                    default:
+                        // Ignore other key presses
+                        break;
+                }
+
+                // Check for moving out of bounds
+                if (!snake.can_advance())
+                    game_over = 1;
+
+                if (!game_over)
+                    if (!snake.advance())   // Advance the snake. If an error is returned,
+                        game_over = 1;      // the snake has collided with itself, game over
+                
+                refresh();
+                wrefresh(gamewin);
+            }
+
+            // ** Game Over **
+            mvprintw(0, gameover_col, "GAME OVER");
+        }
+        c = getch();
+    }
 
     // Cleanup and exit
     delwin(gamewin);
