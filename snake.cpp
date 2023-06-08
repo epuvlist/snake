@@ -64,14 +64,18 @@ public:
     }
 
     void start() {
-        // Clear the window and plot a new snake (i.e. head/tail only).
+        // Reset the snake and plot to window (i.e. head/tail only).
 
         wclear(win);
-        // Set the coordinates as the middle of the window
-        coords[0].row = max_row / 2;
-        coords[0].col = max_col / 2;
+        
+        head = 0;
+        tail = 0;
 
-        mvwaddch(win, coords[0].row, coords[0].col, snake_piece);
+        // Set the coordinates as the middle of the window
+        coords[head].row = max_row / 2;
+        coords[head].col = max_col / 2;
+
+        mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
     };
 
     int can_advance() {
@@ -189,7 +193,6 @@ int main() {
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(1));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
-    mvwprintw(gamewin, 2, 2, "TESTING");
 #endif
 
     // key handling options
@@ -218,6 +221,7 @@ int main() {
     while (c != 'q' and c !='Q') {
 
         // Reset game state
+        // TODO - this only needs doing at start of game, not every loop
         game_over = 0;
         mvprintw(0, gameover_col, "         ");
         refresh();
