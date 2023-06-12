@@ -6,8 +6,9 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Randomise snake starting position and direction 
-// 2. Make 'GAME OVER' have its own window - don't notice it otherwise.
+// 1. Make 'GAME OVER' have its own window - don't notice it otherwise.
+// 2. Choose better snake piece and food characters
+// 3. Improve colour scheme
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -53,7 +54,7 @@ public:
         coords = new Coord[max_length];
         head = 0;
         tail = 0;
-        direction = KEY_LEFT;
+        // 'direction' property not set - it will be set in the 'start()' method
     };
 
     ~Snake() {  // Destructor
@@ -71,15 +72,24 @@ public:
     void start() {
         // Reset the snake and plot to window (i.e. head/tail only).
 
+        const int margin = 5;
+
         wclear(win);
         
         tail = head;  // Tail and head the same coord index, so snake is 1 unit long
 
-        // Set the coordinates as the middle of the window
-        coords[head].row = max_row / 2;
-        coords[head].col = max_col / 2;
+        // Randomise starting coordinates. Keep (margin) cells away from the edge,
+        // to avoid an immediate crash.
 
+        // rand() % (upper - lower +1) + lower
+        // rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN
+        // 
+        coords[head].row = rand() % (max_row - margin * 2) + margin - 1;
+        coords[head].col = rand() % (max_col - margin * 2) + margin - 1;
         mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
+
+        // Randomise starting direction
+        direction = rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN;
     };
 
     int can_advance() {
@@ -168,15 +178,13 @@ public:
 
 void plot_food(WINDOW *win) {
     // Plot a new piece of food in a random location
-    int max_row, max_col;
-    getmaxyx(win, max_row, max_col);
 
     int row, col;
     char screen_cell;
     
     do {
         // TODO - need to add 1?
-        row = rand() % max_row, col = rand() % max_col;
+        row = rand() % win->_maxy, col = rand() % win->_maxx;
         screen_cell = mvwinch(win, row, col) & A_CHARTEXT;
     }
     while (screen_cell != ' ');
