@@ -7,8 +7,7 @@
 
 // TODO
 // 1. Randomise snake starting position and direction 
-// 2. Make the game area a fixed size.
-// 3. Make 'GAME OVER' have its own window - don't notice it otherwise.
+// 2. Make 'GAME OVER' have its own window - don't notice it otherwise.
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -21,6 +20,7 @@ void plot_food(WINDOW *w);
 static const char snake_piece = '*',
     food = 'X';
 static const int game_speed = 3; // Parameter for halfdelay function in tenths of a second
+static const int gamewin_height = 20, gamewin_width = 30;  // Game window size
 
 // Class definition
 class Snake {
@@ -186,7 +186,7 @@ void plot_food(WINDOW *win) {
 
 int main() {
 
-    int c;  // keyboard input
+    int c;  // for keyboard input
     int game_over;  // When becomes 1, game over
     int gameover_col = 20; // Starting column of "Game Over"
     int direction;
@@ -202,13 +202,24 @@ int main() {
 
     // Create gameplay window 'gamewin'. Same width as stdscr
     // but two rows shorter to allow for menu and status bars.
-    WINDOW *gamewin = newwin(LINES - 2, COLS, 1, 0);
+    if (LINES < gamewin_height-2 or COLS < gamewin_width) {
+        fprintf(stderr, "Your terminal is not large enough to display the game window. ");
+        fprintf(stderr, "Please re-size your terminal to at least %d x %d ", gamewin_width, gamewin_height);
+        fprintf(stderr, "characters before re-launching the program\n");
+        endwin();
+        return 1;
+    }
+    WINDOW *gamewin = newwin(gamewin_height, gamewin_width, (LINES-gamewin_height) / 2, (COLS-gamewin_width) / 2);
+    if (!gamewin) {
+        fprintf(stderr, "Cannot initialise game window\n");
+        endwin();
+        return 1;
+    }
 
     // While in dev - colour the background so we can see it
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(1));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
-
 
     // key handling options
     cbreak();
@@ -316,4 +327,6 @@ int main() {
     // Cleanup and exit
     delwin(gamewin);
     endwin();
+
+    return 0;
 }
