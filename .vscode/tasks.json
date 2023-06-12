@@ -8,8 +8,8 @@
 			"args": [
 				"-fdiagnostics-color=always",
 				"-g",
-				"-D",
-				"DEBUG",
+				// "-D",
+				// "DEBUG",
 				"${file}",
 				"-l",
 				"ncurses",

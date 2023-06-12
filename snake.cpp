@@ -5,6 +5,11 @@
 //
 // Copyright (C) Ernold C. McPuvlist, 2023
 
+// TODO
+// 1. Randomise snake starting position and direction 
+// 2. Make the game area a fixed size.
+// 3. Make 'GAME OVER' have its own window - don't notice it otherwise.
+
 #include <ncurses.h>
 #include <stdlib.h>
 #include <time.h>
@@ -68,8 +73,7 @@ public:
 
         wclear(win);
         
-        head = 0;
-        tail = 0;
+        tail = head;  // Tail and head the same coord index, so snake is 1 unit long
 
         // Set the coordinates as the middle of the window
         coords[head].row = max_row / 2;
@@ -92,19 +96,23 @@ public:
         else return 1;
     }
 
-    int advance() {
+    int advance(int *score_ptr) {
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
         // Returns 1 if successful, 0 if hit another part of the snake.
+        // Updates the score using score_ptr if necessary
 
         int old_row = coords[head].row, old_col = coords[head].col;
+        int retval;  // Return value
         
         // Advance the head in the coordinates array.
         // If the head reaches the end of the array, then start again
         // at position 0.
         // This is implemented by using the modulo of the
         // maximum length.
+
+        // TODO: Only need to increase the head index if the snake has grown?
         head = (head + 1) % max_length;
  
         switch(direction) {
@@ -133,12 +141,13 @@ public:
         switch(winch(win) & A_CHARTEXT) {
             case food:
                 // Food piece hit - plot new head but don't erase tail
+                (*score_ptr)++;  // Increase the score
                 waddch(win, snake_piece);
-                plot_food(win);  // Plot another piece
-                return 1;
+                plot_food(win);  // Plot another food piece
+                retval = 1;
                 break;
             case snake_piece:
-                return 0;  // Game Over
+                retval = 0;  // Game Over
                 break;           
             default:
                 // No food here, plot head and remove the tail
@@ -146,8 +155,14 @@ public:
                 mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
                 // Advance the tail in the coordinates array
                 tail = (tail + 1) % max_length;
-                return 1;
+                retval = 1;
         }
+#ifdef DEBUG
+        // Display the head and tail indices
+        mvprintw(0, 30, "H: %05d", head);
+        mvprintw(0, 40, "T: %05d", tail);
+#endif
+    return retval;
     };
 };
 
@@ -173,7 +188,7 @@ int main() {
 
     int c;  // keyboard input
     int game_over;  // When becomes 1, game over
-    int gameover_col; // Starting column of "Game Over"
+    int gameover_col = 20; // Starting column of "Game Over"
     int direction;
     int score;
 
@@ -188,12 +203,12 @@ int main() {
     // Create gameplay window 'gamewin'. Same width as stdscr
     // but two rows shorter to allow for menu and status bars.
     WINDOW *gamewin = newwin(LINES - 2, COLS, 1, 0);
-#ifdef DEBUG
+
     // While in dev - colour the background so we can see it
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(1));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
-#endif
+
 
     // key handling options
     cbreak();
@@ -205,7 +220,6 @@ int main() {
     nodelay(stdscr, false); // Blocking mode while in main menu loop
 
     // Set up the containing screen
-    gameover_col = 20;
     mvprintw(0, 0, "Score:");  // TODO - move to right hand side
     mvprintw(LINES - 1, 0, "S - Start New Game | Q - Quit");
     refresh();
@@ -220,20 +234,20 @@ int main() {
     c = getch();  // Wait for key
     while (c != 'q' and c !='Q') {
 
-        // Reset game state
-        // TODO - this only needs doing at start of game, not every loop
-        game_over = 0;
-        mvprintw(0, gameover_col, "         ");
-        refresh();
-
         if (c == 's' or c == 'S') {
-            // Start the game
+        // Start a new game
+
+            // Reset game state
+            game_over = 0;
+            score = 0;
+            mvprintw(0, gameover_col, "         ");
+
             snake.start();
             // Place a piece of food
             plot_food(gamewin);
-#ifndef DEBUG
-            nodelay(gamewin, true);
-#endif
+
+            wtimeout(gamewin, 500);  // 500 ms timeout while debugging
+
             // Main gameplay loop
 
             while(!game_over) {
@@ -280,16 +294,22 @@ int main() {
                     game_over = 1;
 
                 if (!game_over)
-                    if (!snake.advance())   // Advance the snake. If an error is returned,
+                    if (!snake.advance(&score))   // Advance the snake. If an error is returned,
                         game_over = 1;      // the snake has collided with itself, game over
-                
+
+                // Display score
+                mvprintw(0, 7, "%d", score); // TODO - only needs re-display if it has changed
+
                 refresh();
                 wrefresh(gamewin);
             }
 
             // ** Game Over **
             mvprintw(0, gameover_col, "GAME OVER");
+            // Reset keyboard input to blocking
+            wtimeout(gamewin, -1);
         }
+        // More 'if's can go here if other menu options wanted
         c = getch();
     }
 
