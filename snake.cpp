@@ -16,6 +16,7 @@
 
 // Forward declarations
 void plot_food(WINDOW *w);
+int random_range(int min, int max);
 
 // Static globals
 static const char snake_piece = '*',
@@ -81,15 +82,16 @@ public:
         // Randomise starting coordinates. Keep (margin) cells away from the edge,
         // to avoid an immediate crash.
 
-        // rand() % (upper - lower +1) + lower
-        // rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN
-        // 
-        coords[head].row = rand() % (max_row - margin * 2) + margin - 1;
-        coords[head].col = rand() % (max_col - margin * 2) + margin - 1;
+// min row = margin; max row = max_row - margin
+        coords[head].row = random_range(margin, max_row - margin);
+        // coords[head].row = rand() % (max_row - margin * 2) + margin - 1;
+        coords[head].col = random_range(margin, max_col - margin);
+        // coords[head].col = rand() % (max_col - margin * 2) + margin - 1;
         mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
 
         // Randomise starting direction
-        direction = rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN;
+        direction = random_range(KEY_DOWN, KEY_RIGHT);
+        // direction = rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN;
     };
 
     int can_advance() {
@@ -184,12 +186,20 @@ void plot_food(WINDOW *win) {
     
     do {
         // TODO - need to add 1?
-        row = rand() % win->_maxy, col = rand() % win->_maxx;
+        // row = rand() % win->_maxy, col = rand() % win->_maxx;
+        row = random_range(0, win->_maxy);
+        col = random_range(0, win->_maxx);
         screen_cell = mvwinch(win, row, col) & A_CHARTEXT;
     }
     while (screen_cell != ' ');
 
     waddch(win, food);
+}
+
+int random_range(int min, int max) {
+    // Return a random integer in the range min-max
+    return rand() % (max - min + 1) + min; 
+
 }
 
 int main() {
