@@ -349,9 +349,11 @@ int main() {
             }
 
             // ** Game Over **
+            touchwin(gameoverwin);
             wrefresh(gameoverwin); // Display 'Game Over' popup and wait for key
             wgetch(gameoverwin);
             touchwin(gamewin);
+            wrefresh(gamewin);
 
             // Reset keyboard input to blocking
             wtimeout(gamewin, -1);
