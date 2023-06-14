@@ -6,17 +6,18 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Make 'GAME OVER' have its own window - don't notice it otherwise.
+// 1. Make 'GAME OVER' more prominent
 // 2. Choose better snake piece and food characters
-// 3. Improve colour scheme
+// 3. Improve colour scheme, make colours bright
+// 4. Increase speed as game progresses
 
 #include <ncurses.h>
 #include <stdlib.h>
 #include <time.h>
 
 // Forward declarations
-void plot_food(WINDOW *w);
-int random_range(int min, int max);
+static void plot_food(WINDOW *w);
+static int random_range(int min, int max);
 
 // Static globals
 static const char snake_piece = '*',
@@ -178,7 +179,7 @@ public:
     };
 };
 
-void plot_food(WINDOW *win) {
+static void plot_food(WINDOW *win) {
     // Plot a new piece of food in a random location
 
     int row, col;
@@ -196,7 +197,7 @@ void plot_food(WINDOW *win) {
     waddch(win, food);
 }
 
-int random_range(int min, int max) {
+static int random_range(int min, int max) {
     // Return a random integer in the range min-max
     return rand() % (max - min + 1) + min; 
 
@@ -206,7 +207,6 @@ int main() {
 
     int c;  // for keyboard input
     int game_over;  // When becomes 1, game over
-    int gameover_col = 20; // Starting column of "Game Over"
     int direction;
     int score;
 
@@ -234,9 +234,26 @@ int main() {
         return 1;
     }
 
+    // Create the pop-up "Game Over" messagebox window
+	WINDOW *gameoverwin = newwin(4, 29, (LINES-4) / 2, (COLS-29) / 2);
+    if (!gameoverwin) {
+        fprintf(stderr, "Cannot initialise Game Over popup\n");
+        delwin(gamewin);
+        endwin();
+        return 1;
+    }
+   	init_pair(1, COLOR_BLACK, COLOR_RED);   // for text
+	init_pair(2, COLOR_GREEN, COLOR_BLACK); // for 'Press any key'
+	wattrset(gameoverwin, COLOR_PAIR(1));
+	wborder(gameoverwin, 0,0,0,0,0,0,0,0);
+	wattrset(gameoverwin, COLOR_PAIR(2) | A_BOLD);
+	mvwprintw(gameoverwin, 1, 6, " ** GAME OVER **");
+	wattrset(gameoverwin, COLOR_PAIR(3) | A_BOLD);
+	mvwprintw(gameoverwin, 2, 2, "Press any key to continue");
+	
     // While in dev - colour the background so we can see it
-    init_pair(1, COLOR_BLACK, COLOR_GREEN);
-    wbkgd(gamewin, COLOR_PAIR(1));
+    init_pair(3, COLOR_BLACK, COLOR_GREEN);
+    wbkgd(gamewin, COLOR_PAIR(3));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
 
     // key handling options
@@ -251,7 +268,6 @@ int main() {
     // Set up the containing screen
     mvprintw(0, 0, "Score:");  // TODO - move to right hand side
     mvprintw(LINES - 1, 0, "S - Start New Game | Q - Quit");
-    refresh();
 
     // Create the snake object in gamewin.
     Snake snake(gamewin);
@@ -260,7 +276,7 @@ int main() {
     // Main control loop
     // ===================
 
-    c = getch();  // Wait for key
+    c = getch();  // Wait for key. This will also call a refresh
     while (c != 'q' and c !='Q') {
 
         if (c == 's' or c == 'S') {
@@ -269,7 +285,6 @@ int main() {
             // Reset game state
             game_over = 0;
             score = 0;
-            mvprintw(0, gameover_col, "         ");
 
             snake.start();
             // Place a piece of food
@@ -334,7 +349,10 @@ int main() {
             }
 
             // ** Game Over **
-            mvprintw(0, gameover_col, "GAME OVER");
+            wrefresh(gameoverwin); // Display 'Game Over' popup and wait for key
+            wgetch(gameoverwin);
+            touchwin(gamewin);
+
             // Reset keyboard input to blocking
             wtimeout(gamewin, -1);
         }
@@ -344,6 +362,7 @@ int main() {
 
     // Cleanup and exit
     delwin(gamewin);
+    delwin(gameoverwin);
     endwin();
 
     return 0;
