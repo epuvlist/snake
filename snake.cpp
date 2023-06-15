@@ -6,9 +6,9 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Make 'GAME OVER' more prominent
-// 2. Choose better snake piece and food characters
-// 3. Improve colour scheme, make colours bright
+// 1. Choose better snake piece and food characters
+// 2. Use only top-level status bar, no need for lower
+// 3. Decide on colour scheme, set up colour pairs
 // 4. Increase speed as game progresses
 
 #include <ncurses.h>
@@ -22,7 +22,6 @@ static int random_range(int min, int max);
 // Static globals
 static const char snake_piece = '*',
     food = 'X';
-static const int game_speed = 3; // Parameter for halfdelay function in tenths of a second
 static const int gamewin_height = 20, gamewin_width = 30;  // Game window size
 
 // Class definition
@@ -83,16 +82,14 @@ public:
         // Randomise starting coordinates. Keep (margin) cells away from the edge,
         // to avoid an immediate crash.
 
-// min row = margin; max row = max_row - margin
         coords[head].row = random_range(margin, max_row - margin);
-        // coords[head].row = rand() % (max_row - margin * 2) + margin - 1;
         coords[head].col = random_range(margin, max_col - margin);
-        // coords[head].col = rand() % (max_col - margin * 2) + margin - 1;
+
+        // Add the piece
         mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
 
         // Randomise starting direction
         direction = random_range(KEY_DOWN, KEY_RIGHT);
-        // direction = rand() % (KEY_RIGHT - KEY_DOWN + 1) + KEY_DOWN;
     };
 
     int can_advance() {
@@ -125,7 +122,6 @@ public:
         // This is implemented by using the modulo of the
         // maximum length.
 
-        // TODO: Only need to increase the head index if the snake has grown?
         head = (head + 1) % max_length;
  
         switch(direction) {
@@ -172,8 +168,8 @@ public:
         }
 #ifdef DEBUG
         // Display the head and tail indices
-        mvprintw(0, 30, "H: %05d", head);
-        mvprintw(0, 40, "T: %05d", tail);
+        mvprintw(1, 0, "H: %05d", head);
+        mvprintw(1, 10, "T: %05d", tail);
 #endif
     return retval;
     };
@@ -182,14 +178,14 @@ public:
 static void plot_food(WINDOW *win) {
     // Plot a new piece of food in a random location
 
-    int row, col;
+    int maxx, maxy, row, col;
     char screen_cell;
+
+    getmaxyx(win, maxx, maxy);
     
     do {
-        // TODO - need to add 1?
-        // row = rand() % win->_maxy, col = rand() % win->_maxx;
-        row = random_range(0, win->_maxy);
-        col = random_range(0, win->_maxx);
+        row = random_range(0, maxy);
+        col = random_range(0, maxx);
         screen_cell = mvwinch(win, row, col) & A_CHARTEXT;
     }
     while (screen_cell != ' ');
@@ -218,9 +214,8 @@ int main() {
     // Seed the random generator
     srand(time(NULL));
 
-    // Create gameplay window 'gamewin'. Same width as stdscr
-    // but two rows shorter to allow for menu and status bars.
-    if (LINES < gamewin_height-2 or COLS < gamewin_width) {
+    // Create gameplay window 'gamewin'.
+    if (LINES < gamewin_height+1 or COLS < gamewin_width) {
         fprintf(stderr, "Your terminal is not large enough to display the game window. ");
         fprintf(stderr, "Please re-size your terminal to at least %d x %d ", gamewin_width, gamewin_height);
         fprintf(stderr, "characters before re-launching the program\n");
@@ -242,6 +237,7 @@ int main() {
         endwin();
         return 1;
     }
+    // TODO - init all needed colour pairs, see main TODO
    	init_pair(1, COLOR_BLACK, COLOR_RED);   // for text
 	init_pair(2, COLOR_GREEN, COLOR_BLACK); // for 'Press any key'
 	wattrset(gameoverwin, COLOR_PAIR(1));
@@ -251,14 +247,13 @@ int main() {
 	wattrset(gameoverwin, COLOR_PAIR(3) | A_BOLD);
 	mvwprintw(gameoverwin, 2, 2, "Press any key to continue");
 	
-    // While in dev - colour the background so we can see it
+    // Colour the game area background and add border
     init_pair(3, COLOR_BLACK, COLOR_GREEN);
     wbkgd(gamewin, COLOR_PAIR(3));
     wborder(gamewin, 0,0,0,0,0,0,0,0);
 
     // key handling options
     cbreak();
-    // keypad(stdscr, TRUE);
     keypad(gamewin, TRUE);
     noecho();
     curs_set(0);
@@ -266,8 +261,8 @@ int main() {
     nodelay(stdscr, false); // Blocking mode while in main menu loop
 
     // Set up the containing screen
-    mvprintw(0, 0, "Score:");  // TODO - move to right hand side
-    mvprintw(LINES - 1, 0, "S - Start New Game | Q - Quit");
+    mvprintw(0, 0, "Score:              ");  // TODO - arrange items on header row NICELY
+    printw("S - Start New Game | Q - Quit");
 
     // Create the snake object in gamewin.
     Snake snake(gamewin);
@@ -276,7 +271,7 @@ int main() {
     // Main control loop
     // ===================
 
-    c = getch();  // Wait for key. This will also call a refresh
+    c = getch();  // Wait for key. This will also call a refresh on stdscr
     while (c != 'q' and c !='Q') {
 
         if (c == 's' or c == 'S') {
@@ -290,6 +285,7 @@ int main() {
             // Place a piece of food
             plot_food(gamewin);
 
+            // Set starting speed
             wtimeout(gamewin, 500);  // 500 ms timeout while debugging
 
             // Main gameplay loop
