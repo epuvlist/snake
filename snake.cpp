@@ -6,9 +6,8 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Lay out menu bar (l. 275)
-// 2. Choose better snake piece and food characters
-// 3. Increase speed as game progresses
+// 1. Choose better snake piece and food characters
+// 2. Increase speed as game progresses
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -22,6 +21,7 @@ static int random_range(int min, int max);
 static const char snake_piece = '*',
     food = 'X';
 static const int gamewin_height = 20, gamewin_width = 30;  // Game window size
+static int score;
 
 // Class definition
 class Snake {
@@ -98,6 +98,10 @@ public:
 
         // Randomise starting direction
         direction = random_range(KEY_DOWN, KEY_RIGHT);
+
+        score = 0;
+        mvprintw(0,8, "%5d", score);
+        refresh();
     };
 
     int can_advance() {
@@ -114,7 +118,7 @@ public:
         else return 1;
     }
 
-    int advance(int *score_ptr) {
+    int advance() {
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
@@ -158,7 +162,10 @@ public:
         switch(winch(win) & A_CHARTEXT) {
             case food:
                 // Food piece hit - plot new head but don't erase tail
-                (*score_ptr)++;  // Increase the score
+                score++;  // Increase and display the score
+                mvprintw(0,8, "%5d", score);
+                refresh();
+
                 waddch(win, snake_piece);
                 plot_food(win);  // Plot another food piece
                 retval = 1;
@@ -252,10 +259,11 @@ int main() {
 	init_pair(2, COLOR_WHITE, COLOR_BLUE);  // For gameplay window and border
     init_pair(3, COLOR_YELLOW, COLOR_BLUE); // For gameplay window and snake
     init_pair(4, COLOR_BLACK, COLOR_CYAN);  // For menu item text
-    init_pair(5, COLOR_BLACK, COLOR_RED);   // For 'Game Over' text 
+    init_pair(5, COLOR_BLACK, COLOR_RED);   // For 'Game Over' text
+    init_pair(6, COLOR_BLACK, COLOR_WHITE); // For the score display
 
     // Set up the 'Game Over' popup window
-	wattrset(gameoverwin, COLOR_PAIR(1));
+	wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
 	box(gameoverwin, 0, 0);
 	wattrset(gameoverwin, COLOR_PAIR(5) | A_BOLD);
 	mvwprintw(gameoverwin, 1, 6, " ** GAME OVER **");
@@ -271,8 +279,14 @@ int main() {
     nodelay(stdscr, false); // Blocking mode while in main menu loop
 
     // Set up the containing screen
-    mvprintw(0, 0, "Score:              ");  // TODO - arrange items on header row NICELY
-    printw("S - Start New Game | Q - Quit");  // and using the colour scheme defined in colour pairs above
+    attrset(COLOR_PAIR(1) | A_BOLD);
+    mvprintw(0, 1, "Score:");  // TODO - arrange items on header row NICELY
+    mvprintw(0, 23, "S");
+    mvprintw(0, 40, "Q");
+    attrset(COLOR_PAIR(4));
+    mvprintw(0, 25, "Start new game");
+    mvprintw(0, 42, "Quit");
+    attrset(COLOR_PAIR(6)); // for remaining display of score
 
     // Create the snake object in gamewin.
     Snake snake(gamewin);
@@ -346,15 +360,8 @@ int main() {
                     game_over = 1;
 
                 if (!game_over)
-                    if (!snake.advance(&score))   // Advance the snake. If an error is returned,
+                    if (!snake.advance())   // Advance the snake. If an error is returned,
                         game_over = 1;      // the snake has collided with itself, game over
-
-                // Display score
-                if (score != old_score) {  // Only needs displaying if it has changed
-                    mvprintw(0, 7, "%d", score);
-                    old_score = score;
-                    refresh();
-                }
             }
 
             // ** Game Over **
