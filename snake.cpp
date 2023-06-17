@@ -6,10 +6,9 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Choose better snake piece and food characters
-// 2. Use only top-level status bar, no need for lower
-// 3. Decide on colour scheme, set up colour pairs
-// 4. Increase speed as game progresses
+// 1. Lay out menu bar (l. 275)
+// 2. Choose better snake piece and food characters
+// 3. Increase speed as game progresses
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -46,16 +45,23 @@ class Snake {
 
 public:
     // Constructor. 'w' is the ncurses window that the snake will be drawn in.
-    // The snake is allowed to fill the entire window, so max_length is
-    // max no. of rows times max no. of columns.
+    // The snake is allowed to fill the entire window, excluding the inner border,
+    // so max_length is max no. of rows - 1 times max no. of columns - 1.
     Snake(WINDOW *w) {
         win = w;
         getmaxyx(w, max_row, max_col);
+        // Window max row ranges from 0 to max_row, same for max col.
+        // The snake's allowed area will be between 1 and
+        // (window max - 1), to allow for the inner border.
+        // Therefore subtract 2 to get max_row & max_col.
+        max_row-=2; max_col-=2;
+
         max_length = max_row * max_col;
         coords = new Coord[max_length];
         head = 0;
         tail = 0;
-        // 'direction' property not set - it will be set in the 'start()' method
+        direction = 0;  // 'direction' property not explicitly set - 
+                        // it will be set in the 'init()' method
     };
 
     ~Snake() {  // Destructor
@@ -70,18 +76,22 @@ public:
         direction = d;
     }
 
-    void start() {
+    void init() {
         // Reset the snake and plot to window (i.e. head/tail only).
 
         const int margin = 5;
 
+        // Reset the game window appearance
         wclear(win);
+        wbkgd(win, COLOR_PAIR(2));
+        wattrset(win, COLOR_PAIR(2) | A_BOLD);
+        box(win, 0, 0);
+        wattrset(win, COLOR_PAIR(3) | A_BOLD);
         
         tail = head;  // Tail and head the same coord index, so snake is 1 unit long
 
         // Randomise starting coordinates. Keep (margin) cells away from the edge,
         // to avoid an immediate crash.
-
         coords[head].row = random_range(margin, max_row - margin);
         coords[head].col = random_range(margin, max_col - margin);
 
@@ -98,10 +108,10 @@ public:
         int row = coords[head].row, col = coords[head].col;
 
         // Check if hitting the edge of the window
-        if ((row == 0 and direction == KEY_UP) or
-            (row == max_row-1 and direction == KEY_DOWN) or
-            (col == 0 and direction == KEY_LEFT) or
-            (col == max_col-1 and direction == KEY_RIGHT))
+        if ((row == 1 and direction == KEY_UP) or
+            (row == max_row and direction == KEY_DOWN) or
+            (col == 1 and direction == KEY_LEFT) or
+            (col == max_col and direction == KEY_RIGHT))
             return 0;
         else return 1;
     }
@@ -214,7 +224,7 @@ int main() {
     // Seed the random generator
     srand(time(NULL));
 
-    // Create gameplay window 'gamewin'.
+    // Create the gameplay window 'gamewin'.
     if (LINES < gamewin_height+1 or COLS < gamewin_width) {
         fprintf(stderr, "Your terminal is not large enough to display the game window. ");
         fprintf(stderr, "Please re-size your terminal to at least %d x %d ", gamewin_width, gamewin_height);
@@ -237,20 +247,21 @@ int main() {
         endwin();
         return 1;
     }
-    // TODO - init all needed colour pairs, see main TODO
-   	init_pair(1, COLOR_BLACK, COLOR_RED);   // for text
-	init_pair(2, COLOR_GREEN, COLOR_BLACK); // for 'Press any key'
+
+    // Initialise all colour pairs    
+   	init_pair(1, COLOR_WHITE, COLOR_BLACK); // Default, and for menu key choices
+	init_pair(2, COLOR_WHITE, COLOR_BLUE);  // For gameplay window and border
+    init_pair(3, COLOR_YELLOW, COLOR_BLUE); // For gameplay window and snake
+    init_pair(4, COLOR_BLACK, COLOR_CYAN);  // For menu item text
+    init_pair(5, COLOR_BLACK, COLOR_RED);   // For 'Game Over' text 
+
+    // Set up the 'Game Over' popup window
 	wattrset(gameoverwin, COLOR_PAIR(1));
-	wborder(gameoverwin, 0,0,0,0,0,0,0,0);
-	wattrset(gameoverwin, COLOR_PAIR(2) | A_BOLD);
+	box(gameoverwin, 0, 0);
+	wattrset(gameoverwin, COLOR_PAIR(5) | A_BOLD);
 	mvwprintw(gameoverwin, 1, 6, " ** GAME OVER **");
-	wattrset(gameoverwin, COLOR_PAIR(3) | A_BOLD);
+	wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
 	mvwprintw(gameoverwin, 2, 2, "Press any key to continue");
-	
-    // Colour the game area background and add border
-    init_pair(3, COLOR_BLACK, COLOR_GREEN);
-    wbkgd(gamewin, COLOR_PAIR(3));
-    wborder(gamewin, 0,0,0,0,0,0,0,0);
 
     // key handling options
     cbreak();
@@ -262,7 +273,7 @@ int main() {
 
     // Set up the containing screen
     mvprintw(0, 0, "Score:              ");  // TODO - arrange items on header row NICELY
-    printw("S - Start New Game | Q - Quit");
+    printw("S - Start New Game | Q - Quit");  // and using the colour scheme defined in colour pairs above
 
     // Create the snake object in gamewin.
     Snake snake(gamewin);
@@ -281,12 +292,14 @@ int main() {
             game_over = 0;
             score = 0;
 
-            snake.start();
+            snake.init();
             // Place a piece of food
             plot_food(gamewin);
 
+#ifndef DEBUG
             // Set starting speed
             wtimeout(gamewin, 500);  // 500 ms timeout while debugging
+#endif
 
             // Main gameplay loop
 

@@ -9,6 +9,7 @@
             "type": "cppdbg",
             "cwd": "${fileDirname}",
             "request": "launch",
+            "targetArchitecture":"arm64",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [],
             "externalConsole": true,
