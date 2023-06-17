@@ -44,11 +44,9 @@ class Snake {
                     // use the constants KEY_UP, KEY_LEFT etc.
 
 public:
-    // Constructor. 'w' is the ncurses window that the snake will be drawn in.
-    // The snake is allowed to fill the entire window, excluding the inner border,
-    // so max_length is max no. of rows - 1 times max no. of columns - 1.
+    // Constructor. 'w' is 
     Snake(WINDOW *w) {
-        win = w;
+        win = w; // The ncurses window that the snake will be drawn in.
         getmaxyx(w, max_row, max_col);
         // Window max row ranges from 0 to max_row, same for max col.
         // The snake's allowed area will be between 1 and
@@ -215,6 +213,7 @@ int main() {
     int game_over;  // When becomes 1, game over
     int direction;
     int score;
+    int old_score;
 
     // Create overall window. This will display menu and status bar,
     // and also contain the game animation window 'gamewin'
@@ -290,7 +289,7 @@ int main() {
 
             // Reset game state
             game_over = 0;
-            score = 0;
+            score = old_score = 0;
 
             snake.init();
             // Place a piece of food
@@ -351,10 +350,11 @@ int main() {
                         game_over = 1;      // the snake has collided with itself, game over
 
                 // Display score
-                mvprintw(0, 7, "%d", score); // TODO - only needs re-display if it has changed
-
-                refresh();
-                wrefresh(gamewin);
+                if (score != old_score) {  // Only needs displaying if it has changed
+                    mvprintw(0, 7, "%d", score);
+                    old_score = score;
+                    refresh();
+                }
             }
 
             // ** Game Over **
