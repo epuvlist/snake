@@ -126,7 +126,7 @@ public:
         else return 1;
     }
 
-    int advance(int *score) {
+    int advance(int *score_ptr) {
 
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
@@ -171,8 +171,8 @@ public:
         switch(winch(win) & A_CHARTEXT) {
             case GraphicChars::FOOD_PIECE:
                 // Food piece hit - plot new head but don't erase tail
-                (*score)++;  // Increase and display the score
-                mvprintw(0,8, "%5d", *score);
+                (*score_ptr)++;  // Increase and display the score
+                mvprintw(0,8, "%5d", *score_ptr);
                 refresh();
 
                 waddch(win, GraphicChars::SNAKE_PIECE);
@@ -324,11 +324,10 @@ int main() {
             score = old_score = 0;
 
             snake.init();
-            score = 0;
             mvprintw(0,8, "%5d", score);
             refresh();
 
-            // Plac e a piece of food
+            // Place a piece of food
             plot_food(gamewin);
 
 #ifndef DEBUG
