@@ -17,16 +17,20 @@
 static void plot_food(WINDOW *w);
 static int random_range(int min, int max);
 
-// Static globals
-static const chtype snake_piece = '*',
-    food = 'X';
-static const int gamewin_height = 20, gamewin_width = 30;  // Game window size
-static const int max_timeout = 500, min_timeout = 100; // these control game speed
+// Class definitions
+class GraphicChars
+// The character graphics to use.
+// This class is never instantiated, just used for
+// the enum constants.
+{
+    public:
+    enum
+    {
+        SNAKE_PIECE = '*',
+        FOOD_PIECE = 'X'
+    };    
+};
 
-static int score;
-static float speed_conversion_factor;
-
-// Class definition
 class Snake {
 
     // Define Coord structure, to hold row & col coordinates
@@ -101,14 +105,11 @@ public:
         coords[head].col = random_range(margin, max_col - margin);
 
         // Add the piece
-        mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
+        mvwaddch(win, coords[head].row, coords[head].col, GraphicChars::SNAKE_PIECE);
 
         // Randomise starting direction
         direction = random_range(KEY_DOWN, KEY_RIGHT);
 
-        score = 0;
-        mvprintw(0,8, "%5d", score);
-        refresh();
     };
 
     int can_advance() {
@@ -125,7 +126,8 @@ public:
         else return 1;
     }
 
-    int advance() {
+    int advance(int *score) {
+
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
@@ -167,22 +169,22 @@ public:
         wmove(win, coords[head].row, coords[head].col);
 
         switch(winch(win) & A_CHARTEXT) {
-            case food:
+            case GraphicChars::FOOD_PIECE:
                 // Food piece hit - plot new head but don't erase tail
-                score++;  // Increase and display the score
-                mvprintw(0,8, "%5d", score);
+                (*score)++;  // Increase and display the score
+                mvprintw(0,8, "%5d", *score);
                 refresh();
 
-                waddch(win, snake_piece);
+                waddch(win, GraphicChars::SNAKE_PIECE);
                 plot_food(win);  // Plot another food piece
                 retval = 1;
                 break;
-            case snake_piece:
+            case GraphicChars::SNAKE_PIECE:
                 retval = 0;  // Game Over
                 break;           
             default:
                 // No food here, plot head and remove the tail
-                waddch(win, snake_piece);
+                waddch(win, GraphicChars::SNAKE_PIECE);
                 mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
                 // Advance the tail in the coordinates array
                 tail = (tail + 1) % max_length;
@@ -212,7 +214,7 @@ static void plot_food(WINDOW *win) {
     }
     while (screen_cell != ' ');
 
-    waddch(win, food);
+    waddch(win, GraphicChars::FOOD_PIECE);
 }
 
 static int random_range(int min, int max) {
@@ -228,6 +230,10 @@ int main() {
     int direction;
     int score;
     int old_score;
+    const int gamewin_height = 20, gamewin_width = 30;  // Game window size
+    const int max_timeout = 500, min_timeout = 100; // these control game speed
+
+    float speed_conversion_factor;
 
     // Create overall window. This will display menu and status bar,
     // and also contain the game animation window 'gamewin'
@@ -287,7 +293,7 @@ int main() {
 
     // Set up the containing screen
     attrset(COLOR_PAIR(1) | A_BOLD);
-    mvprintw(0, 1, "Score:");  // TODO - arrange items on header row NICELY
+    mvprintw(0, 1, "Score:");
     mvprintw(0, 23, "S");
     mvprintw(0, 40, "Q");
     attrset(COLOR_PAIR(4));
@@ -302,7 +308,6 @@ int main() {
     // This is used to reduce the timeout interval (i.e. increase the game speed)
     // in inverse proportion to the current score.
     speed_conversion_factor = (float)(max_timeout - min_timeout) / (float)snake.get_max_length();
-    mvprintw(0, 10, "HH%fHH", speed_conversion_factor);
 
     // ===================
     // Main control loop
@@ -319,7 +324,11 @@ int main() {
             score = old_score = 0;
 
             snake.init();
-            // Place a piece of food
+            score = 0;
+            mvprintw(0,8, "%5d", score);
+            refresh();
+
+            // Plac e a piece of food
             plot_food(gamewin);
 
 #ifndef DEBUG
@@ -373,7 +382,7 @@ int main() {
                     game_over = 1;
 
                 if (!game_over)
-                    if (!snake.advance())   // Advance the snake. If an error is returned,
+                    if (!snake.advance(&score))   // Advance the snake. If an error is returned,
                         game_over = 1;      // the snake has collided with itself, game over
             }
 
