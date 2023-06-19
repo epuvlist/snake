@@ -18,10 +18,13 @@ static void plot_food(WINDOW *w);
 static int random_range(int min, int max);
 
 // Static globals
-static const char snake_piece = '*',
+static const chtype snake_piece = '*',
     food = 'X';
 static const int gamewin_height = 20, gamewin_width = 30;  // Game window size
+static const int max_timeout = 500, min_timeout = 100; // these control game speed
+
 static int score;
+static float speed_conversion_factor;
 
 // Class definition
 class Snake {
@@ -66,6 +69,10 @@ public:
         delete coords;
     };
 
+    int get_max_length() {
+        return max_length;
+    }
+    
     int get_direction() {
         return direction;
     }
@@ -291,6 +298,12 @@ int main() {
     // Create the snake object in gamewin.
     Snake snake(gamewin);
 
+    // Calculate speed conversion factor.
+    // This is used to reduce the timeout interval (i.e. increase the game speed)
+    // in inverse proportion to the current score.
+    speed_conversion_factor = (float)(max_timeout - min_timeout) / (float)snake.get_max_length();
+    mvprintw(0, 10, "HH%fHH", speed_conversion_factor);
+
     // ===================
     // Main control loop
     // ===================
@@ -311,7 +324,7 @@ int main() {
 
 #ifndef DEBUG
             // Set starting speed
-            wtimeout(gamewin, 500);  // 500 ms timeout while debugging
+            wtimeout(gamewin, max_timeout);
 #endif
 
             // Main gameplay loop
