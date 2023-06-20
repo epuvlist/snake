@@ -7,7 +7,7 @@
 
 // TODO
 // 1. Choose better snake piece and food characters
-// 2. Increase speed as game progresses
+// 2. Increase speed as game progresses (l. 51)
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -17,18 +17,40 @@
 static void plot_food(WINDOW *w);
 static int random_range(int min, int max);
 
-// Class definitions
-class GraphicChars
-// The character graphics to use.
-// This class is never instantiated, just used for
-// the enum constants.
+// Define the character graphics to use.
+enum GraphicChars : chtype
 {
+    SNAKE_PIECE = '*',
+    FOOD_PIECE = 'X'    
+};
+
+// Class definitions
+
+class GameSpeed {  // Controls for the game speed (window timeout)
+    private:
+    int max_timeout;    // maximum value for wtimeout() (slowest speed)
+    int min_timeout;    // minimum value for wtimeout() (fastest speed)
+    int max_score;      // highest the score could get
+    float speed_conversion_factor; // for calculating current timeout value from score
+
     public:
-    enum
-    {
-        SNAKE_PIECE = '*',
-        FOOD_PIECE = 'X'
-    };    
+    // Constructor
+    GameSpeed(int maxt, int mint, int mscore) {
+        max_timeout = maxt;
+        min_timeout = mint;
+        max_score = mscore;
+
+    // Calculate speed conversion factor.
+    // This is used to reduce the timeout interval (i.e. increase the game speed)
+    // in inverse proportion to the current score.
+        speed_conversion_factor = (float)(max_timeout - min_timeout) / (float)max_score;
+    };
+
+    void set_timeout(WINDOW *w, int score) {
+        // Set the timeout on window w.
+        // TODO - use conversion factor
+        wtimeout(w, 500);
+    }
 };
 
 class Snake {
@@ -51,9 +73,10 @@ class Snake {
                     // use the constants KEY_UP, KEY_LEFT etc.
 
 public:
-    // Constructor. 'w' is 
+    // Constructor
     Snake(WINDOW *w) {
         win = w; // The ncurses window that the snake will be drawn in.
+
         getmaxyx(w, max_row, max_col);
         // Window max row ranges from 0 to max_row, same for max col.
         // The snake's allowed area will be between 1 and
@@ -99,7 +122,7 @@ public:
         
         tail = head;  // Tail and head the same coord index, so snake is 1 unit long
 
-        // Randomise starting coordinates. Keep (margin) cells away from the edge,
+        // Randomise starting coordinates. Keep [margin] cells away from the edge,
         // to avoid an immediate crash.
         coords[head].row = random_range(margin, max_row - margin);
         coords[head].col = random_range(margin, max_col - margin);
@@ -109,7 +132,6 @@ public:
 
         // Randomise starting direction
         direction = random_range(KEY_DOWN, KEY_RIGHT);
-
     };
 
     int can_advance() {
@@ -126,13 +148,15 @@ public:
         else return 1;
     }
 
-    int advance(int *score_ptr) {
+    int advance(int *score_ptr, GameSpeed *gs) {
 
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
         // Also update the coords array, which tracks where the snake has been.
         // Returns 1 if successful, 0 if hit another part of the snake.
-        // Updates the score using score_ptr if necessary
+        // Arguments:
+        // score_ptr - pointer to the score, so that it can be updated.
+        // gs - GameSpeed object
 
         int old_row = coords[head].row, old_col = coords[head].col;
         int retval;  // Return value
@@ -174,6 +198,10 @@ public:
                 (*score_ptr)++;  // Increase and display the score
                 mvprintw(0,8, "%5d", *score_ptr);
                 refresh();
+                // TODO - increase game speed
+                
+
+            // mvprintw(0, 14, "%d", max_timeout);
 
                 waddch(win, GraphicChars::SNAKE_PIECE);
                 plot_food(win);  // Plot another food piece
@@ -220,7 +248,6 @@ static void plot_food(WINDOW *win) {
 static int random_range(int min, int max) {
     // Return a random integer in the range min-max
     return rand() % (max - min + 1) + min; 
-
 }
 
 int main() {
@@ -231,9 +258,6 @@ int main() {
     int score;
     int old_score;
     const int gamewin_height = 20, gamewin_width = 30;  // Game window size
-    const int max_timeout = 500, min_timeout = 100; // these control game speed
-
-    float speed_conversion_factor;
 
     // Create overall window. This will display menu and status bar,
     // and also contain the game animation window 'gamewin'
@@ -304,10 +328,8 @@ int main() {
     // Create the snake object in gamewin.
     Snake snake(gamewin);
 
-    // Calculate speed conversion factor.
-    // This is used to reduce the timeout interval (i.e. increase the game speed)
-    // in inverse proportion to the current score.
-    speed_conversion_factor = (float)(max_timeout - min_timeout) / (float)snake.get_max_length();
+    // Create the game speed object
+    GameSpeed gamespeed(500, 100, snake.get_max_length());
 
     // ===================
     // Main control loop
@@ -330,10 +352,8 @@ int main() {
             // Place a piece of food
             plot_food(gamewin);
 
-#ifndef DEBUG
             // Set starting speed
-            wtimeout(gamewin, max_timeout);
-#endif
+            gamespeed.set_timeout(gamewin, 0);
 
             // Main gameplay loop
 
@@ -381,7 +401,7 @@ int main() {
                     game_over = 1;
 
                 if (!game_over)
-                    if (!snake.advance(&score))   // Advance the snake. If an error is returned,
+                    if (!snake.advance(&score, &gamespeed))   // Advance the snake. If an error is returned,
                         game_over = 1;      // the snake has collided with itself, game over
             }
 
