@@ -6,8 +6,8 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
+// BUG - crashes at bottom of screen
 // 1. Choose better snake piece and food characters
-// 2. Increase speed as game progresses (l. 51)
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -28,28 +28,28 @@ enum GraphicChars : chtype
 
 class GameSpeed {  // Controls for the game speed (window timeout)
     private:
-    int max_timeout;    // maximum value for wtimeout() (slowest speed)
-    int min_timeout;    // minimum value for wtimeout() (fastest speed)
+    int min_timeout;    // maximum value for wtimeout() (slowest speed)
+    int max_timeout;    // minimum value for wtimeout() (fastest speed)
     int max_score;      // highest the score could get
-    float speed_conversion_factor; // for calculating current timeout value from score
 
     public:
     // Constructor
-    GameSpeed(int maxt, int mint, int mscore) {
-        max_timeout = maxt;
+    GameSpeed(int mint, int maxt, int mscore) {
         min_timeout = mint;
+        max_timeout = maxt;
         max_score = mscore;
-
-    // Calculate speed conversion factor.
-    // This is used to reduce the timeout interval (i.e. increase the game speed)
-    // in inverse proportion to the current score.
-        speed_conversion_factor = (float)(max_timeout - min_timeout) / (float)max_score;
-    };
+    }
 
     void set_timeout(WINDOW *w, int score) {
         // Set the timeout on window w.
-        // TODO - use conversion factor
-        wtimeout(w, 500);
+#ifdef DEBUG
+        int to = max_timeout - score * (max_timeout - min_timeout) / max_score;
+        wtimeout(w, to);
+        mvprintw(0, 14, "%d", to);
+        refresh();
+#else
+        wtimeout(w, max_timeout - score * (max_timeout - min_timeout) / max_score);
+#endif
     }
 };
 
@@ -199,9 +199,7 @@ public:
                 mvprintw(0,8, "%5d", *score_ptr);
                 refresh();
                 // TODO - increase game speed
-                
-
-            // mvprintw(0, 14, "%d", max_timeout);
+                gs->set_timeout(win, *score_ptr);
 
                 waddch(win, GraphicChars::SNAKE_PIECE);
                 plot_food(win);  // Plot another food piece
@@ -329,7 +327,8 @@ int main() {
     Snake snake(gamewin);
 
     // Create the game speed object
-    GameSpeed gamespeed(500, 100, snake.get_max_length());
+    // Start with min 100 ms, max 350 ms
+    GameSpeed gamespeed(100, 350, snake.get_max_length());
 
     // ===================
     // Main control loop
