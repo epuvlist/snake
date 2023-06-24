@@ -13,8 +13,11 @@
 #include <time.h>
 
 // Forward declarations
-static void plot_food(WINDOW *w, const chtype fd_piece);
+static void plot_food(WINDOW *w);
 static int random_range(int min, int max);
+
+// Constants for character display
+enum { SNAKE_PIECE = 'O', FOOD_PIECE = '*' };
 
 // Class definitions
 
@@ -62,11 +65,10 @@ class Snake {
 
     int direction;  // Direction the snake is moving in. For this we will
                     // use the constants KEY_UP, KEY_LEFT etc.
-    chtype snake_piece; // Snake piece character
 
 public:
     // Constructor
-    Snake(WINDOW *w, chtype snkpiece) {
+    Snake(WINDOW *w) {
         win = w; // The ncurses window that the snake will be drawn in.
 
         getmaxyx(w, max_row, max_col);
@@ -82,7 +84,6 @@ public:
         tail = 0;
         direction = 0;  // 'direction' property not explicitly set - 
                         // it will be set in the 'init()' method
-        snake_piece = snkpiece;
     };
 
     ~Snake() {  // Destructor
@@ -121,7 +122,7 @@ public:
         coords[head].col = random_range(MARGIN, max_col - MARGIN);
 
         // Add the piece
-        mvwaddch(win, coords[head].row, coords[head].col, snake_piece);
+        mvwaddch(win, coords[head].row, coords[head].col, SNAKE_PIECE);
 
         // Randomise starting direction
         direction = random_range(KEY_DOWN, KEY_RIGHT);
@@ -141,7 +142,7 @@ public:
         else return 1;
     }
 
-    int advance(int *score_ptr, GameSpeed *gs, chtype fd_piece) {
+    int advance(int *score_ptr, GameSpeed *gs) {
 
         // Advance the snake by adding a new head, and deleting old tail if 
         // not on a food piece.
@@ -189,7 +190,7 @@ public:
 
         // Have to use if...else here. Cannot use switch/case, as
         // comparison character values are not known at compile time
-        if (char_in_situ == fd_piece) {
+        if (char_in_situ == FOOD_PIECE) {
             // Food piece hit - plot new head but don't erase tail
             (*score_ptr)++;  // Increase and display the score
             mvprintw(0,8, "%5d", *score_ptr);
@@ -197,15 +198,15 @@ public:
             // Increase game speed
             gs->set_timeout(win, *score_ptr);
 
-            waddch(win, snake_piece);
-            plot_food(win, fd_piece);  // Plot another food piece
+            waddch(win, SNAKE_PIECE);
+            plot_food(win);  // Plot another food piece
             retval = 1;
         }
-        else if (char_in_situ == snake_piece) 
+        else if (char_in_situ == SNAKE_PIECE) 
             retval = 0;  // Game Over
         else {
             // No food here, plot head and remove the tail
-            waddch(win, snake_piece);
+            waddch(win, SNAKE_PIECE);
             mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
             // Advance the tail in the coordinates array
             tail = (tail + 1) % max_length;
@@ -220,7 +221,7 @@ public:
     };
 };
 
-static void plot_food(WINDOW *win, const chtype fd_piece) {
+static void plot_food(WINDOW *win) {
     // Plot a new piece of food in a random location
 
     int maxx, maxy, row, col;
@@ -235,7 +236,7 @@ static void plot_food(WINDOW *win, const chtype fd_piece) {
     }
     while (screen_cell != ' ');
 
-    waddch(win, fd_piece);
+    waddch(win, FOOD_PIECE);
 }
 
 static int random_range(int min, int max) {
@@ -250,10 +251,9 @@ int main() {
     int direction;
     int score;
     int old_score;
-    chtype food_piece;
 
     enum {  // game window size
-        GAMEWIN_HEIGHT = 20, GAMEWIN_WIDTH = 30
+        GAMEWIN_HEIGHT = 15, GAMEWIN_WIDTH = 30
     };
 
     // Create overall window. This will display menu and status bar,
@@ -323,13 +323,11 @@ int main() {
     attrset(COLOR_PAIR(6)); // for remaining display of score
 
     // Create the snake object in gamewin.
-    Snake snake(gamewin, 'O');
+    Snake snake(gamewin);
 
     // Create the game speed object
     // Start with min 100 ms, max 350 ms
     GameSpeed gamespeed(100, 350, snake.get_max_length());
-
-    food_piece = '*';
 
     // ===================
     // Main control loop
@@ -350,7 +348,7 @@ int main() {
             refresh();
 
             // Place a piece of food
-            plot_food(gamewin, food_piece);
+            plot_food(gamewin);
 
             // Set starting speed
             gamespeed.set_timeout(gamewin, 0);
@@ -401,7 +399,7 @@ int main() {
                     game_over = 1;
 
                 if (!game_over)
-                    if (!snake.advance(&score, &gamespeed, food_piece))   // Advance the snake. If an error is returned,
+                    if (!snake.advance(&score, &gamespeed))   // Advance the snake. If an error is returned,
                         game_over = 1;      // the snake has collided with itself, game over
             }
 
