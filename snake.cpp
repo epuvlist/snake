@@ -6,7 +6,7 @@
 // Copyright (C) Ernold C. McPuvlist, 2023
 
 // TODO
-// 1. Check for any unnecessary refreshes when finalising
+//
 
 #include <ncurses.h>
 #include <stdlib.h>
@@ -37,13 +37,9 @@ class GameSpeed {  // Controls for the game speed (window timeout)
 
     void set_timeout(WINDOW *w, int score) {
         // Set the timeout on window w.
-#ifdef DEBUG
-        int to = max_timeout - score * (max_timeout - min_timeout) / max_score;
-        wtimeout(w, to);
-        mvprintw(0, 14, "%d", to);
-#else
+        // This is calculated as the maximum timeout,
+        // minus the timeout range divided by the score range.
         wtimeout(w, max_timeout - score * (max_timeout - min_timeout) / max_score);
-#endif
     }
 };
 
@@ -76,14 +72,14 @@ public:
         // The snake's allowed area will be between 1 and
         // (window max - 1), to allow for the inner border.
         // Therefore subtract 2 to get max_row & max_col.
-        max_row-=2; max_col-=2;
+        max_row -= 2; max_col -= 2;
 
         max_length = max_row * max_col;
         coords = new Coord[max_length];
         head = 0;
         tail = 0;
-        direction = 0;  // 'direction' property not explicitly set - 
-                        // it will be set in the 'init()' method
+        // 'direction' property not explicitly set - 
+        // it will be set in the 'init()' method
     };
 
     ~Snake() {  // Destructor
@@ -103,7 +99,7 @@ public:
     }
 
     void init() {
-        // Reset the snake and plot to window (i.e. head/tail only).
+        // Reset the snake to one piece, and plot to window.
 
         enum {MARGIN=5};
 
@@ -160,7 +156,6 @@ public:
         // at position 0.
         // This is implemented by using the modulo of the
         // maximum length.
-
         head = (head + 1) % max_length;
  
         switch(direction) {
@@ -190,21 +185,23 @@ public:
 
         // Have to use if...else here. Cannot use switch/case, as
         // comparison character values are not known at compile time
-        if (char_in_situ == FOOD_PIECE) {
-            // Food piece hit - plot new head but don't erase tail
-            (*score_ptr)++;  // Increase and display the score
-            mvprintw(0,8, "%5d", *score_ptr);
-            refresh();
-            // Increase game speed
-            gs->set_timeout(win, *score_ptr);
+        switch (char_in_situ) {
+            case FOOD_PIECE:
+                // Food piece hit - plot new head but don't erase tail
+                (*score_ptr)++;  // Increase and display the score
+                mvprintw(0,8, "%5d", *score_ptr);
+                refresh();
+                // Increase game speed
+                gs->set_timeout(win, *score_ptr);
 
-            waddch(win, SNAKE_PIECE);
-            plot_food(win);  // Plot another food piece
-            retval = 1;
-        }
-        else if (char_in_situ == SNAKE_PIECE) 
+                waddch(win, SNAKE_PIECE);
+                plot_food(win);  // Plot another food piece
+                retval = 1;
+                break;
+        case SNAKE_PIECE: 
             retval = 0;  // Game Over
-        else {
+            break;
+        default:
             // No food here, plot head and remove the tail
             waddch(win, SNAKE_PIECE);
             mvwaddch(win, coords[tail].row, coords[tail].col, ' ');
@@ -229,6 +226,7 @@ static void plot_food(WINDOW *win) {
 
     getmaxyx(win, maxx, maxy);
     
+    // Keep hunting for a blank cell to put the food in
     do {
         row = random_range(0, maxy);
         col = random_range(0, maxx);
@@ -273,22 +271,11 @@ int main() {
         return 1;
     }
     WINDOW *gamewin = newwin(GAMEWIN_HEIGHT, GAMEWIN_WIDTH, (LINES-GAMEWIN_HEIGHT) / 2, (COLS-GAMEWIN_WIDTH) / 2);
-    if (!gamewin) {
-        fprintf(stderr, "Cannot initialise game window\n");
-        endwin();
-        return 1;
-    }
 
     // Create the pop-up "Game Over" messagebox window
 	WINDOW *gameoverwin = newwin(4, 29, (LINES-4) / 2, (COLS-29) / 2);
-    if (!gameoverwin) {
-        fprintf(stderr, "Cannot initialise Game Over popup\n");
-        delwin(gamewin);
-        endwin();
-        return 1;
-    }
 
-    // Initialise all colour pairs    
+    // Initialise the colour pairs that will be used
    	init_pair(1, COLOR_WHITE, COLOR_BLACK); // Default, and for menu key choices
 	init_pair(2, COLOR_WHITE, COLOR_BLUE);  // For gameplay window and border
     init_pair(3, COLOR_YELLOW, COLOR_BLUE); // For gameplay window and snake
@@ -322,12 +309,12 @@ int main() {
     mvprintw(0, 42, "Quit");
     attrset(COLOR_PAIR(6)); // for remaining display of score
 
-    // Create the snake object in gamewin.
+    // Create the snake object.
     Snake snake(gamewin);
 
     // Create the game speed object
-    // Start with min 100 ms, max 350 ms
-    GameSpeed gamespeed(100, 350, snake.get_max_length());
+    // Range from 300 ms (starting) to 50 ms (fastest)
+    GameSpeed gamespeed(50, 300, snake.get_max_length());
 
     // ===================
     // Main control loop
@@ -363,35 +350,33 @@ int main() {
                 switch(c) {
                     // Update the direction based on what key has been pressed
                     case KEY_UP:
-                        if (direction == KEY_DOWN) { // Crashed back onto yourself
+                        if (direction == KEY_DOWN) { // Crashed up into yourself
                             game_over = 1;
                             break;
                         }
                         snake.set_direction(KEY_UP);
                         break;
                     case KEY_DOWN:
-                        if (direction == KEY_UP) { // Crashed back onto yourself
+                        if (direction == KEY_UP) { // Crashed down into yourself
                             game_over = 1;
                             break;
                         }
                         snake.set_direction(KEY_DOWN);
                         break;
                     case KEY_LEFT:
-                        if (direction == KEY_RIGHT) { // Crashed back onto yourself
+                        if (direction == KEY_RIGHT) { // Crashed left into yourself
                             game_over = 1;
                             break;
                         }
                         snake.set_direction(KEY_LEFT);
                         break;
                     case KEY_RIGHT:
-                        if (direction == KEY_LEFT) { // Crashed back onto yourself
+                        if (direction == KEY_LEFT) { // Crashed right into yourself
                             game_over = 1;
                             break;
                         }
                         snake.set_direction(KEY_RIGHT);
-                    default:
-                        // Ignore other key presses
-                        break;
+                    // Ignore all other key presses
                 }
 
                 // Check for moving out of bounds
