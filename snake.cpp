@@ -17,7 +17,7 @@ static void plot_food(WINDOW *w);
 static int random_range(int min, int max);
 
 // Constants for character display
-enum { SNAKE_PIECE = 'O', FOOD_PIECE = '*' };
+enum : chtype { SNAKE_PIECE = 'O', FOOD_PIECE = '*' };
 
 // Class definitions
 
