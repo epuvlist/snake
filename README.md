@@ -27,7 +27,7 @@ that calculates the timeout interval to use as the game speed.
 
 Compiled on a Raspberry Pi 4 running the aarch64 version of Raspberry Pi OS Bullseye.
 Compiled using:  
-g++ -Wall snake.cpp -lncurses -osnake
+>g++ -Wall snake.cpp -lncurses -osnake
 
 Only plain characters are used ('O' for the snake pieces and '*' for the food piece.
 I tried using extended characters (e.g. ACS_DIAMOND) but because ncurses implements
