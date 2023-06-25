@@ -25,7 +25,8 @@ Programming notes
 This is written in C++. Classes are used for the snake, and for a Gamespeed object
 that calculates the timeout interval to use as the game speed.
 
-The ncurses library must be installed. To get ncurses see (https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/).
+The ncurses library must be installed. To get ncurses see [NCURSES Programming HOWTO](https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/).
+
 Compiled on a Raspberry Pi 4 running the aarch64 version of Raspberry Pi OS Bullseye.
 Compiled using:  
 >g++ -Wall snake.cpp -lncurses -osnake
