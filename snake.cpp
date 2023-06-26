@@ -89,7 +89,7 @@ public:
     int get_max_length() {
         return max_length;
     }
-    
+
     int get_direction() {
         return direction;
     }
@@ -109,7 +109,7 @@ public:
         wattrset(win, COLOR_PAIR(2) | A_BOLD);
         box(win, 0, 0);
         wattrset(win, COLOR_PAIR(3) | A_BOLD);
-        
+
         tail = head;  // Tail and head the same coord index, so snake is 1 unit long
 
         // Randomise starting coordinates. Keep [margin] cells away from the edge,
@@ -150,14 +150,14 @@ public:
 
         int old_row = coords[head].row, old_col = coords[head].col;
         int retval;  // Return value
-        
+
         // Advance the head in the coordinates array.
         // If the head reaches the end of the array, then start again
         // at position 0.
         // This is implemented by using the modulo of the
         // maximum length.
         head = (head + 1) % max_length;
- 
+
         switch(direction) {
             // Update the coords array with new head position
             case KEY_LEFT:
@@ -171,7 +171,7 @@ public:
             case KEY_UP:
                 coords[head].row = old_row - 1;
                 coords[head].col = old_col;
-                break;          
+                break;
             case KEY_DOWN:
                 coords[head].row = old_row + 1;
                 coords[head].col = old_col;
@@ -198,7 +198,7 @@ public:
                 plot_food(win);  // Plot another food piece
                 retval = 1;
                 break;
-        case SNAKE_PIECE: 
+        case SNAKE_PIECE:
             retval = 0;  // Game Over
             break;
         default:
@@ -225,7 +225,7 @@ static void plot_food(WINDOW *win) {
     char screen_cell;
 
     getmaxyx(win, maxx, maxy);
-    
+
     // Keep hunting for a blank cell to put the food in
     do {
         row = random_range(0, maxy);
@@ -273,23 +273,23 @@ int main() {
     WINDOW *gamewin = newwin(GAMEWIN_HEIGHT, GAMEWIN_WIDTH, (LINES-GAMEWIN_HEIGHT) / 2, (COLS-GAMEWIN_WIDTH) / 2);
 
     // Create the pop-up "Game Over" messagebox window
-	WINDOW *gameoverwin = newwin(4, 29, (LINES-4) / 2, (COLS-29) / 2);
+    WINDOW *gameoverwin = newwin(4, 29, (LINES-4) / 2, (COLS-29) / 2);
 
     // Initialise the colour pairs that will be used
-   	init_pair(1, COLOR_WHITE, COLOR_BLACK); // Default, and for menu key choices
-	init_pair(2, COLOR_WHITE, COLOR_BLUE);  // For gameplay window and border
+    init_pair(1, COLOR_WHITE, COLOR_BLACK); // Default, and for menu key choices
+    init_pair(2, COLOR_WHITE, COLOR_BLUE);  // For gameplay window and border
     init_pair(3, COLOR_YELLOW, COLOR_BLUE); // For gameplay window and snake
     init_pair(4, COLOR_BLACK, COLOR_CYAN);  // For menu item text
     init_pair(5, COLOR_BLACK, COLOR_RED);   // For 'Game Over' text
     init_pair(6, COLOR_BLACK, COLOR_WHITE); // For the score display
 
     // Set up the 'Game Over' popup window
-	wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
-	box(gameoverwin, 0, 0);
-	wattrset(gameoverwin, COLOR_PAIR(5) | A_BOLD);
-	mvwprintw(gameoverwin, 1, 6, " ** GAME OVER **");
-	wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
-	mvwprintw(gameoverwin, 2, 2, "Press any key to continue");
+    wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
+    box(gameoverwin, 0, 0);
+    wattrset(gameoverwin, COLOR_PAIR(5) | A_BOLD);
+    mvwprintw(gameoverwin, 1, 6, " ** GAME OVER **");
+    wattrset(gameoverwin, COLOR_PAIR(1) | A_BOLD);
+    mvwprintw(gameoverwin, 2, 2, "Press any key to continue");
 
     // key handling options
     cbreak();
