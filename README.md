@@ -27,8 +27,8 @@ that calculates the timeout interval to use as the game speed.
 
 The ncurses library must be installed. To get ncurses see [NCURSES Programming HOWTO](https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/).
 
-Written and compiled on a Raspberry Pi 4 running the 64-bit version of Raspberry Pi OS Bullseye.
-Compiled using:  
+Written and compiled on a Raspberry Pi 4 running Raspberry Pi OS Bullseye (64-bit).
+Compiled using the command:
 >g++ -Wall snake.cpp -lncurses -osnake
 
 Also compiles OK on Mac OS Catalina using g++ or clang++ compilers. Not tested on a Windows system.
