@@ -31,7 +31,7 @@ Written and compiled on a Raspberry Pi 4 running Raspberry Pi OS Bullseye (64-bi
 Compiled using the command:
 >g++ -Wall snake.cpp -lncurses -osnake
 
-Also compiles OK on Mac OS Catalina using g++ or clang++ compilers. Not tested on a Windows system.
+C++11 is the minimum version required. Also compiles OK on Mac OS Catalina using g++ and clang++ compilers. Not tested on a Windows system.
 
 Only plain characters are used ('O' for the snake pieces and '*' for the food piece.
 I tried using extended characters (e.g. ACS_DIAMOND) but because ncurses implements
