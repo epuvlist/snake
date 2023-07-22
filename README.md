@@ -29,7 +29,7 @@ The ncurses library must be installed. To get ncurses see [NCURSES Programming H
 
 Written and compiled on a Raspberry Pi 4 running Raspberry Pi OS Bullseye (64-bit).
 Compiled using the command:
->g++ -Wall snake.cpp -lncurses -osnake
+>g++ -Wall -std=c++11 snake.cpp -lncurses -osnake
 
 C++11 is the minimum version required. Also compiles OK on Mac OS Catalina using g++ and clang++ compilers. Not tested on a Windows system.
 
