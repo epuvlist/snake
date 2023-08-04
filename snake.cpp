@@ -23,8 +23,8 @@ enum : chtype { SNAKE_PIECE = 'O', FOOD_PIECE = '*' };
 
 class GameSpeed {  // Controls for the game speed (window timeout)
     private:
-    int min_timeout;    // maximum value for wtimeout() (slowest speed)
-    int max_timeout;    // minimum value for wtimeout() (fastest speed)
+    int min_timeout;    // minimum value for wtimeout() (slowest speed)
+    int max_timeout;    // maximum value for wtimeout() (fastest speed)
     int max_score;      // highest the score could get
 
     public:
@@ -183,8 +183,7 @@ public:
 
         char char_in_situ = winch(win) & A_CHARTEXT;
 
-        // Have to use if...else here. Cannot use switch/case, as
-        // comparison character values are not known at compile time
+        // Inspect what character is currently at the current screen position
         switch (char_in_situ) {
             case FOOD_PIECE:
                 // Food piece hit - plot new head but don't erase tail
@@ -199,7 +198,8 @@ public:
                 retval = 1;
                 break;
         case SNAKE_PIECE:
-            retval = 0;  // Game Over
+            // We've hit the snake - Game Over
+            retval = 0;
             break;
         default:
             // No food here, plot head and remove the tail
