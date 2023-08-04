@@ -33,6 +33,6 @@ Compiled using the command:
 
 C++11 is the minimum version required. Also compiles OK on Mac OS Catalina using g++ and clang++ compilers. Not tested on a Windows system.
 
-Only plain characters are used ('O' for the snake pieces and '*' for the food piece.
+Only plain characters are used ('O' for the snake pieces and '*' for the food piece).
 I tried using extended characters (e.g. ACS_DIAMOND) but because ncurses implements
 these as macros it is difficult to use their values as constants.
